@@ -1,0 +1,6 @@
+*.pyc
+*.txt
+*.model
+*.png
+*.gz
+*.pkl
