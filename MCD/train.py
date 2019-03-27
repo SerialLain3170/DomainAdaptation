@@ -8,6 +8,7 @@ import numpy as np
 from scipy.io import loadmat
 from chainer import cuda,initializers,optimizers,serializers,datasets
 from model import Classification, Encoder
+from swd import sliced_wasserstein_distance
 
 xp=cuda.cupy
 cuda.get_device(0).use()
@@ -119,6 +120,7 @@ for epoch in range(epochs):
         loss = F.softmax_cross_entropy(s1, t)
         loss += F.softmax_cross_entropy(s2, t)
         loss -= discrepancy_loss(m1, m2)
+        #loss -= sliced_wasserstein_distance(m1, m2)
 
         classifier_1.cleargrads()
         classifier_2.cleargrads()
@@ -138,6 +140,7 @@ for epoch in range(epochs):
             m2 = classifier_2(y_t)
 
             loss = discrepancy_loss(m1, m2)
+            #loss = sliced_wasserstein_distance(m1, m2)
 
             generator.cleargrads()
             classifier_1.cleargrads()
@@ -154,9 +157,9 @@ for epoch in range(epochs):
         classifier_2.enable_update()
 
         if epoch % 10 == 0 and batch == 0:
-            serializers.save_npz('generator.model', generator)
-            serializers.save_npz('classifier_1.model', classifier_1)
-            serializers.save_npz('classifier_2.model', classifier_2)
+            serializers.save_npz('generator_swd.model', generator)
+            serializers.save_npz('classifier_swd_1.model', classifier_1)
+            serializers.save_npz('classifier_swd_2.model', classifier_2)
 
             count_1 = 0
             count_2 = 0

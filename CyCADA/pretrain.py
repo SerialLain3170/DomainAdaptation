@@ -3,7 +3,7 @@ import chainer.functions as F
 from chainer import cuda, optimizers, serializers
 from pathlib import Path
 import argparse
-from model import Encoder, Classification
+from model import TaskNet
 from scipy.io import loadmat
 import numpy as np
 
@@ -24,13 +24,9 @@ args = parser.parse_args()
 epochs = args.e
 batchsize = args.b
 
-encoder = Encoder(in_ch=3)
-encoder.to_gpu()
-enc_opt = set_optimizer(encoder)
-
-classification = Classification()
-classification.to_gpu()
-class_opt = set_optimizer(classification)
+tasknet = TaskNet()
+tasknet.to_gpu()
+task_opt = set_optimizer(tasknet)
 
 x = loadmat("./Dataset/train_32x32.mat")['X']
 t = loadmat("./Dataset/train_32x32.mat")['y']
@@ -68,28 +64,23 @@ for epoch in range(epochs):
         s = chainer.as_variable(xp.array(svhn_box).astype(xp.float32))
         l = chainer.as_variable(xp.array(label_box).astype(xp.int32))[:, 0]
 
-        y = classification(encoder(s))
+        y = tasknet(s)
         loss = F.softmax_cross_entropy(y, l)
 
-        encoder.cleargrads()
-        classification.cleargrads()
-
+        tasknet.cleargrads()
         loss.backward()
-
-        enc_opt.update()
-        class_opt.update()
+        task_opt.update()
 
         sum_loss += loss.data.get()
 
         if epoch % 10 == 0 and batch == 0:
-            serializers.save_npz('encoder.model', encoder)
-            serializers.save_npz('classification.model', classification)
+            serializers.save_npz('taksnet.model', tasknet)
             
             count = 0
             for b in range(0, Ntest, batchsize):
                 test_batch = test[b : b+batchsize]
                 with chainer.using_config('train', False):
-                    y = F.softmax(classification(encoder(test_batch)))
+                    y = F.softmax(tasknet(test_batch))
                 y.unchain_backward()
                 y = y.data.get()
                 for index in range(b, b+batchsize):
